@@ -1,0 +1,109 @@
+﻿@page "/FileUpload"
+@using Microsoft.Extensions.Logging
+@using DataLibrary.Model
+@using System.IO
+@using CsvHelper
+@using System.Globalization
+@using System.Data
+
+@inject ILogger<FileUpload> Logger
+
+<h3>Upload Files</h3>
+
+<p>
+    <label>
+        Max file size:
+        <input type="number" @bind="maxFileSize" />
+    </label>
+</p>
+
+<p>
+    <label>
+        Max allowed files:
+        <input type="number" @bind="maxAllowedFiles" />
+    </label>
+</p>
+
+<p>
+    <label>
+        Upload up to @maxAllowedFiles CSV file of up to @maxFileSize bytes:
+        <InputFile OnChange="@LoadFiles" multiple />
+    </label>
+</p>
+
+<p>
+    <button class="btn btn-primary" @onclick="@ParseData">Upload Files to Database</button>
+</p>
+
+@if (isLoading)
+{
+    <p>Ciagle pracuje...</p>
+}
+else
+{
+    <ul>
+        @foreach (var file in loadedFiles)
+        {
+            <li>
+                <ul>
+                    <li>Name: @file.Name</li>
+
+                    <li>Last modified: @file.LastModified.ToString()</li>
+                    <li>Size (bytes): @file.Size</li>
+                    <li>Content type: @file.ContentType</li>
+                    <li>Inside @file.ToString()</li>
+                </ul>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private List<IBrowserFile> loadedFiles = new();
+    private List<Stream> streams = new();
+
+    private long maxFileSize = 1024 * 3;
+    private int maxAllowedFiles = 1;
+    private bool isLoading;
+
+    private void LoadFiles(InputFileChangeEventArgs e)
+    {
+        isLoading = true;
+        loadedFiles.Clear();
+        streams.Clear();
+
+        foreach (var file in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            try
+            {
+                Stream stream = new MemoryStream();
+                file.OpenReadStream().CopyToAsync(stream);
+
+                streams.Add(stream);
+                loadedFiles.Add(file);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("File: {Filename} Error: {Error}",
+                    file.Name, ex.Message);
+            }
+        }
+
+        isLoading = false;
+    }
+    private void ParseData()
+    {
+        if (loadedFiles.Count > 0)
+        {
+            foreach (var item in streams)
+            {
+                //using var stream =  new StreamReader(item.OpenReadStream());
+
+                string result = System.Text.Encoding.UTF8.GetString((item as MemoryStream).ToArray());
+                DataLibrary.Model.Files.ParserCSV(item);
+
+            }
+
+        }
+    }
+}
