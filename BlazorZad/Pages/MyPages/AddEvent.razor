@@ -1,0 +1,50 @@
+﻿@page "/Data/AddEvent"
+
+@using DataLibrary
+@using DataLibrary.Model
+
+@inject IEventData _db
+
+<h1>Event Page</h1>
+
+<h4>Current Events </h4>
+
+@if (myEvent is null)
+{
+    <p><em>Zaciagam...</em></p>
+}
+else
+{
+    <table class="table table-striped" >
+        <thead >
+            <tr>
+                <th>Event Name</th>
+                <th>Description</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var oneEvent in myEvent)
+            {
+                <tr>
+                    <td>@oneEvent.EventName</td>
+                    <td>@oneEvent.EventDesc</td>
+                    <td>@oneEvent.EventStartDate.ToShortDateString() </td>
+                    <td>@oneEvent.EventEndDate.ToShortDateString()</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<EventModel> myEvent;
+
+    protected override async Task OnInitializedAsync()
+    {
+        myEvent = await _db.GetEvent();
+
+    }
+
+}
